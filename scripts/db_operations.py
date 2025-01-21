@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from scripts.models import OnhandRecord
 from scripts.generate_hash import generate_hash
 from scripts.generate_hash import generate_hash
-
+import logging
 
 def save_to_db(df_onhand, db: Session, file_date):
     """
@@ -13,28 +13,18 @@ def save_to_db(df_onhand, db: Session, file_date):
         df_pph (DataFrame): DataFrame com os dados a serem inseridos.
         db (Session): Sessão do banco de dados.
     """
+    # Verificar se já existem registros no banco para a mesma data do arquivo
+    existing_records = db.query(OnhandRecord).filter_by(file_date=file_date).first()
+    
+    if existing_records:
+        logging.info(f"[Ignorado] Registros para a data {file_date} já existem no banco. Nenhum registro foi inserido.")
+        return False  # Nenhum dado foi inserido
+    
+    # Inserir os registros, pois não existem registros para a data do arquivo
+    inserted_count = 0
 
-    # hash para chave unica
-    # Passo 1: Criar uma coluna 'temp_id' no DataFrame com números crescentes
-    df_onhand['temp_id'] = range(1, len(df_onhand) + 1)
-
-    # Passo 2: Gerar o hash baseado na combinação das colunas
-    df_onhand['hash_id'] = df_onhand.apply(
-            lambda row: generate_hash(row['temp_id']),
-        axis=1
-    )
-    duplicate_count = 0  # Contador para duplicados
-    inserted_count = 0  # Contador para registros inseridos
     for _, row in df_onhand.iterrows():
-        # Verificar se o hash já existe no banco
-        exists = db.query(OnhandRecord).filter_by(hash_id=row['hash_id']).first()
-
-        if exists:
-            duplicate_count += 1  # Incrementa o contador de duplicados
-            print(f"[Duplicado] Registro já existe para hash: {row['hash_id']}. Ignorando este registro.")
-            continue  # Ignora a inserção do registro duplicado, mas continua processando os próximos
-
-        # Se não for duplicado, criar e adicionar o novo registro
+        
         record = OnhandRecord(
             file_date = file_date,
             org = row['ORG'],
@@ -45,15 +35,14 @@ def save_to_db(df_onhand, db: Session, file_date):
             locator = row['Locator'],
             onhand_qty = row['Onhand Qty'],
             planner = row['Planner'],
-            purchaser = row['Purchaser'],
-            hash_id=row['hash_id']  # Usando o hash_id gerado
+            purchaser = row['Purchaser']
         )
         db.add(record)
         inserted_count += 1  # Incrementa o contador de registros inseridos
 
     # Commit no banco
     db.commit()
-    # Exibe a quantidade de duplicados encontrados
-    print(f"Total de duplicados encontrados: {duplicate_count}")
-    print(f"Total de registros não duplicados inseridos: {inserted_count}")
-    print("[Inserido] Todos os registros não duplicados foram inseridos com sucesso.")
+    # Exibir mensagem de sucesso apenas se registros forem inseridos
+    logging.info(f"[Inserido] Total de registros inseridos para a data {file_date}: {inserted_count}.")
+    logging.info("Dados salvos com sucesso!")
+    return True

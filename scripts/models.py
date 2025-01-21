@@ -5,7 +5,7 @@ Base = declarative_base()
 
 class OnhandRecord(Base):
     
-    __tablename__= 'table_onhand'
+    __tablename__= 'table_onhand_t'
 
     
     id = Column(Integer, primary_key=True, index=True)
@@ -19,4 +19,3 @@ class OnhandRecord(Base):
     onhand_qty = Column(name='onhand_qty', type_=DOUBLE_PRECISION)
     planner = Column(name='planner', type_=String)
     purchaser = Column(name='purchaser', type_=String)
-    hash_id = Column(String, unique=True)

@@ -1,43 +1,17 @@
-import os
-from scripts.db_connection import SessionLocal, engine
-from scripts.models import Base
-from scripts.data_loader import load_excel
-from scripts.data_cleaning import clean_data
-from scripts.db_operations import save_to_db
-from scripts.extract_data_file import extrair_data
-import pandas as pd
-from datetime import datetime
-
+# main.py
+import logging
+from scripts.process_data import processa_arquivo
 def main():
-    # Cria as tabelas no banco de dados
-    Base.metadata.create_all(bind=engine)
-
-    # Criar sessão
-    db = SessionLocal()
     
     try:
         # Carregar os dados
-        file_path = r"Integration Onhand Inquiry20241209.xlsx"
-        sheet_name = 'Sheet1'
-        df_onhand = load_excel(file_path, sheet_name)
+        xlsx_file = r"Integration Onhand Inquiry20250113.xlsx"
 
-        # Extrair data do arquivo
-        file_date = extrair_data(file_path)
-        print(f"Data do ARQUIVO -> {file_date}")
-        
-    
-        # Limpar os dados
-        df_onhand = clean_data(df_onhand)
-        print(df_onhand.columns)
-        
-        # Salvar no banco
-        save_to_db(df_onhand, db, file_date)
-        print("Dados salvos com sucesso!")
+        # processar arquivo
+        processa_arquivo(xlsx_file)
     except Exception as e:
-        print(f"Ocorreu um erro: {e}")
-    finally:
-        db.close()
-
+        logging.error(f"Ocorreu um erro na execução do processo: {e}")
+        logging.exception("Detalhes do erro: ")
 
 if __name__ == "__main__":
     main()
